@@ -9,10 +9,12 @@ import os
 
 from .networks.pose_dla_dcn import get_pose_net as get_dla_dcn
 from .yolo import get_pose_net as get_pose_net_yolo
+# from .yolov8 import get_pose_net as get_pose_net_yolov8
 
 _model_factory = {
   'dla': get_dla_dcn,
-  'yolo': get_pose_net_yolo
+ 'yolo': get_pose_net_yolo,
+  # 'yolov8': get_pose_net_yolov8
 }
 
 def create_model(arch, heads, head_conv):
