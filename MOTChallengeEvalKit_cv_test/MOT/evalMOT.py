@@ -74,10 +74,16 @@ if __name__ == "__main__":
 	eval = MOT_evaluator()
 
 	benchmark_name = "MOT16"
+	# name = "track_with_conflict_free"
+	name="mvmhat_result_cvma"
 
-	gt_dir = "data/eval/self_collected/0511/lpy_all_dataset_detach_0511_35_cvma/gt_cvma"
-	res_dir = "data/eval/self_collected/0511/lpy_all_dataset_detach_0511_35_cvma/track_cvma"
-	seq_file = "data/eval/self_collected/0511/lpy_all_dataset_detach_0511_35_cvma/seqs.txt"
+	# gt_dir = "data/eval/self_collected/0511/lpy_all_dataset_detach_0511_35_cvma/gt_cvma"
+	# res_dir = "data/eval/self_collected/0511/lpy_all_dataset_detach_0511_35_cvma/track_cvma"
+	# seq_file = "data/eval/self_collected/0511/lpy_all_dataset_detach_0511_35_cvma/seqs.txt"
+
+	gt_dir = f"data/eval/divo/{name}/gt"
+	res_dir = f"data/eval/divo/{name}/track"
+	seq_file = f"data/eval/divo/{name}/seqs.txt"
 
 	eval.run(
 	    benchmark_name = benchmark_name,

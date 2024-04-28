@@ -5,6 +5,8 @@ import numpy as np
 gt_dir = "data/eval/divo/gt"
 track_dir = "data/eval/divo/mvmhat_result"
 save_dir = "data/eval/divo/mvmhat_result_cvma"
+# track_dir = "/media/bhavb/E Volume/Dev_Linux/CV/CV Project/track_with_conflict_free"
+# save_dir = "data/eval/divo/track_with_conflict_free"
 
 gt_folder = "gt"
 
@@ -80,6 +82,10 @@ for n in range(len(scene_list)):
 	for m in range(len(vid_list)):
 		vid_name = vid_list[m]
 		gt_path = gt_vid_dir+"/"+vid_name
+
+		# Bhav 28Apr
+		# if "Drone" in vid_name:
+		# 	vid_name = vid_name.replace("Drone", "View3")
 		track_path = track_vid_dir+"/"+vid_name
 
 

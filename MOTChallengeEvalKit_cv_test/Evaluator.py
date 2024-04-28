@@ -171,18 +171,19 @@ class Evaluator(object):
 		raise NotImplementedError
 
 
-	def accumulate_df(self, type = None):
+	def accumulate_df(self, type=None):
 		""" create accumulated dataframe with all sequences """
 		for k, res in enumerate(self.results):
-			res.to_dataframe(display_name = True, type = type )
-			if k == 0: summary = res.df
-			else: summary = summary.append(res.df)
+			res.to_dataframe(display_name=True, type=type)
+			if k == 0:
+				summary = res.df
+			else:
+				summary = pd.concat([summary, res.df])
 		summary = summary.sort_index()
 
+		self.Overall_Results.to_dataframe(display_name=True, type=type)
 
-		self.Overall_Results.to_dataframe(display_name = True, type = type )
-
-		self.summary = summary.append(self.Overall_Results.df)
+		self.summary = pd.concat([summary, self.Overall_Results.df])
 
 
 

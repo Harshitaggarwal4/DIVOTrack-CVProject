@@ -1,5 +1,5 @@
 from __future__ import division
-from collections import OrderedDict, Iterable
+from collections import OrderedDict
 import pandas as pd
 import numpy as np
 import pickle
