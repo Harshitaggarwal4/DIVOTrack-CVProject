@@ -2,9 +2,9 @@ import os.path as osp
 import os
 from tqdm import tqdm
 
-root = '/mnt/sdb/dataset/MOT_datasets/'
-dataset = 'DIVOTrack/images/train'
-label = '/mnt/sdb/dataset/MOT_datasets/DIVOTrack/labels_with_ids/train'
+root = '/scratch/harshit/DivoTrack_Dataset/'
+dataset = 'datasets/images/train'
+label = osp.join(root,'datasets/labels_with_ids/train')
 train_file = '../data/DIVOTrack.train'
 seqs = os.listdir(osp.join(root, dataset))
 seqs.sort()

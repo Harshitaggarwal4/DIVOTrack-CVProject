@@ -302,7 +302,7 @@ if __name__ == "__main__":
                       Side
                       Square
                       Gate2"""
-        data_root = os.path.join(opt.data_dir, "DIVOTrack/images/test")
+        data_root = os.path.join(opt.data_dir, "images/test")
 
     if opt.test_mvmhat:
         seqs_str = """scene1

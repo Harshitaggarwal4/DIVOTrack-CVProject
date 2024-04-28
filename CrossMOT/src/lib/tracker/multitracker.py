@@ -25,10 +25,10 @@ from .basetrack import BaseTrack, TrackState
 
 class STrack(BaseTrack):
     shared_kalman = KalmanFilter()
-    def __init__(self, tlwh, score, temp_feat, buffer_size=30):
 
+    def __init__(self, tlwh, score, temp_feat, buffer_size=30):
         # wait activate
-        self._tlwh = np.asarray(tlwh, dtype=np.float)
+        self._tlwh = np.asarray(tlwh, dtype=np.float64)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
         self.is_activated = False
@@ -55,7 +55,9 @@ class STrack(BaseTrack):
         mean_state = self.mean.copy()
         if self.state != TrackState.Tracked:
             mean_state[7] = 0
-        self.mean, self.covariance = self.kalman_filter.predict(mean_state, self.covariance)
+        self.mean, self.covariance = self.kalman_filter.predict(
+            mean_state, self.covariance
+        )
 
     @staticmethod
     def multi_predict(stracks):
@@ -65,7 +67,9 @@ class STrack(BaseTrack):
             for i, st in enumerate(stracks):
                 if st.state != TrackState.Tracked:
                     multi_mean[i][7] = 0
-            multi_mean, multi_covariance = STrack.shared_kalman.multi_predict(multi_mean, multi_covariance)
+            multi_mean, multi_covariance = STrack.shared_kalman.multi_predict(
+                multi_mean, multi_covariance
+            )
             for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
                 stracks[i].mean = mean
                 stracks[i].covariance = cov
@@ -74,13 +78,15 @@ class STrack(BaseTrack):
         """Start a new tracklet"""
         self.kalman_filter = kalman_filter
         self.track_id = self.next_id()
-        self.mean, self.covariance = self.kalman_filter.initiate(self.tlwh_to_xyah(self._tlwh))
+        self.mean, self.covariance = self.kalman_filter.initiate(
+            self.tlwh_to_xyah(self._tlwh)
+        )
 
         self.tracklet_len = 0
         self.state = TrackState.Tracked
         if frame_id == 1:
             self.is_activated = True
-        #self.is_activated = True
+        # self.is_activated = True
         self.frame_id = frame_id
         self.start_frame = frame_id
 
@@ -110,7 +116,8 @@ class STrack(BaseTrack):
 
         new_tlwh = new_track.tlwh
         self.mean, self.covariance = self.kalman_filter.update(
-            self.mean, self.covariance, self.tlwh_to_xyah(new_tlwh))
+            self.mean, self.covariance, self.tlwh_to_xyah(new_tlwh)
+        )
         self.state = TrackState.Tracked
         self.is_activated = True
 
@@ -121,7 +128,7 @@ class STrack(BaseTrack):
     @property
     def tlwh(self):
         """Get current position in bounding box format `(top left x, top left y,
-                width, height)`.
+        width, height)`.
         """
         if self.mean is None:
             return self._tlwh.copy()
@@ -165,17 +172,17 @@ class STrack(BaseTrack):
         return ret
 
     def __repr__(self):
-        return 'OT_{}_({}-{})'.format(self.track_id, self.start_frame, self.end_frame)
+        return "OT_{}_({}-{})".format(self.track_id, self.start_frame, self.end_frame)
 
 
 class JDETracker(object):
     def __init__(self, opt, frame_rate=30):
         self.opt = opt
         if opt.gpus[0] >= 0:
-            opt.device = torch.device('cuda')
+            opt.device = torch.device("cuda")
         else:
-            opt.device = torch.device('cpu')
-        print('Creating model...')
+            opt.device = torch.device("cpu")
+        print("Creating model...")
         self.model = create_model(opt.arch, opt.heads, opt.head_conv)
         self.model = load_model(self.model, opt.load_model)
         self.model = self.model.to(opt.device)
@@ -194,15 +201,20 @@ class JDETracker(object):
         self.std = np.array(opt.std, dtype=np.float32).reshape(1, 1, 3)
 
         self.kalman_filter = KalmanFilter()
-        
+
         self.seq_dict = {}
 
     def post_process(self, dets, meta):
         dets = dets.detach().cpu().numpy()
         dets = dets.reshape(1, -1, dets.shape[2])
         dets = ctdet_post_process(
-            dets.copy(), [meta['c']], [meta['s']],
-            meta['out_height'], meta['out_width'], self.opt.num_classes)
+            dets.copy(),
+            [meta["c"]],
+            [meta["s"]],
+            meta["out_height"],
+            meta["out_width"],
+            self.opt.num_classes,
+        )
         for j in range(1, self.opt.num_classes + 1):
             dets[0][j] = np.array(dets[0][j], dtype=np.float32).reshape(-1, 5)
         return dets[0]
@@ -211,15 +223,17 @@ class JDETracker(object):
         results = {}
         for j in range(1, self.opt.num_classes + 1):
             results[j] = np.concatenate(
-                [detection[j] for detection in detections], axis=0).astype(np.float32)
+                [detection[j] for detection in detections], axis=0
+            ).astype(np.float32)
 
         scores = np.hstack(
-            [results[j][:, 4] for j in range(1, self.opt.num_classes + 1)])
+            [results[j][:, 4] for j in range(1, self.opt.num_classes + 1)]
+        )
         if len(scores) > self.max_per_image:
             kth = len(scores) - self.max_per_image
             thresh = np.partition(scores, kth)[kth]
             for j in range(1, self.opt.num_classes + 1):
-                keep_inds = (results[j][:, 4] >= thresh)
+                keep_inds = results[j][:, 4] >= thresh
                 results[j] = results[j][keep_inds]
         return results
 
@@ -234,36 +248,40 @@ class JDETracker(object):
         height = img0.shape[0]
         inp_height = im_blob.shape[2]
         inp_width = im_blob.shape[3]
-        c = np.array([width / 2., height / 2.], dtype=np.float32)
+        c = np.array([width / 2.0, height / 2.0], dtype=np.float32)
         s = max(float(inp_width) / float(inp_height) * height, width) * 1.0
-        meta = {'c': c, 's': s,
-                'out_height': inp_height // self.opt.down_ratio,
-                'out_width': inp_width // self.opt.down_ratio}
-                
-        view = path.split('/')[-1].split('_')[0]
-        index = path.split('/')[-1].split('_')[-1].split('.jpg')[0]
+        meta = {
+            "c": c,
+            "s": s,
+            "out_height": inp_height // self.opt.down_ratio,
+            "out_width": inp_width // self.opt.down_ratio,
+        }
 
-        ''' Step 1: Network forward, get detections & embeddings'''
+        view = path.split("/")[-1].split("_")[0]
+        index = path.split("/")[-1].split("_")[-1].split(".jpg")[0]
+
+        """ Step 1: Network forward, get detections & embeddings"""
         with torch.no_grad():
             output = self.model(im_blob)[-1]
-            hm = output['hm'].sigmoid_()
-            wh = output['wh']
-            id_feature = output['id']
+            hm = output["hm"].sigmoid_()
+            wh = output["wh"]
+            id_feature = output["id"]
             id_feature = F.normalize(id_feature, dim=1)
-            
-            view_id_feature = output['view_id']
+
+            view_id_feature = output["view_id"]
             view_id_feature = F.normalize(view_id_feature, dim=1)
 
-            reg = output['reg'] if self.opt.reg_offset else None
-            dets, boxes, scores, clses, inds = mot_decode(hm, wh, reg=reg, ltrb=self.opt.ltrb, K=self.opt.K)
+            reg = output["reg"] if self.opt.reg_offset else None
+            dets, boxes, scores, clses, inds = mot_decode(
+                hm, wh, reg=reg, ltrb=self.opt.ltrb, K=self.opt.K
+            )
             id_feature = _tranpose_and_gather_feat(id_feature, inds)
             id_feature = id_feature.squeeze(0)
             id_feature = id_feature.cpu().numpy()
-            
+
             view_id_feature = _tranpose_and_gather_feat(view_id_feature, inds)
             view_id_feature = view_id_feature.squeeze(0)
             view_id_feature = view_id_feature.cpu().numpy()
-
 
         dets = self.post_process(dets, meta)
         dets = self.merge_outputs([dets])[1]
@@ -271,7 +289,7 @@ class JDETracker(object):
         remain_inds = dets[:, 4] > self.opt.conf_thres
         dets = dets[remain_inds]
         id_feature = id_feature[remain_inds]
-        
+
         boxes = boxes[remain_inds]
         view_id_feature = view_id_feature[remain_inds]
         for feature, bndbox, ind in zip(view_id_feature, boxes, remain_inds):
@@ -279,7 +297,7 @@ class JDETracker(object):
             self.seq_dict[view].append(dettarget)
 
         # vis
-        '''
+        """
         for i in range(0, dets.shape[0]):
             bbox = dets[i][0:4]
             cv2.rectangle(img0, (bbox[0], bbox[1]),
@@ -288,16 +306,18 @@ class JDETracker(object):
         cv2.imshow('dets', img0)
         cv2.waitKey(0)
         id0 = id0-1
-        '''
+        """
 
         if len(dets) > 0:
-            '''Detections'''
-            detections = [STrack(STrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 30) for
-                          (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            """Detections"""
+            detections = [
+                STrack(STrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 30)
+                for (tlbrs, f) in zip(dets[:, :5], id_feature)
+            ]
         else:
             detections = []
 
-        ''' Add newly detected tracklets to tracked_stracks'''
+        """ Add newly detected tracklets to tracked_stracks"""
         unconfirmed = []
         tracked_stracks = []  # type: list[STrack]
         for track in self.tracked_stracks:
@@ -306,14 +326,14 @@ class JDETracker(object):
             else:
                 tracked_stracks.append(track)
 
-        ''' Step 2: First association, with embedding'''
+        """ Step 2: First association, with embedding"""
         strack_pool = joint_stracks(tracked_stracks, self.lost_stracks)
         # Predict the current location with KF
-        #for strack in strack_pool:
-            #strack.predict()
+        # for strack in strack_pool:
+        # strack.predict()
         STrack.multi_predict(strack_pool)
         dists = matching.embedding_distance(strack_pool, detections)
-        #dists = matching.iou_distance(strack_pool, detections)
+        # dists = matching.iou_distance(strack_pool, detections)
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)
 
@@ -327,9 +347,13 @@ class JDETracker(object):
                 track.re_activate(det, self.frame_id, new_id=False)
                 refind_stracks.append(track)
 
-        ''' Step 3: Second association, with IOU'''
+        """ Step 3: Second association, with IOU"""
         detections = [detections[i] for i in u_detection]
-        r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]
+        r_tracked_stracks = [
+            strack_pool[i]
+            for i in u_track
+            if strack_pool[i].state == TrackState.Tracked
+        ]
         dists = matching.iou_distance(r_tracked_stracks, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.5)
 
@@ -349,10 +373,12 @@ class JDETracker(object):
                 track.mark_lost()
                 lost_stracks.append(track)
 
-        '''Deal with unconfirmed tracks, usually tracks with only one beginning frame'''
+        """Deal with unconfirmed tracks, usually tracks with only one beginning frame"""
         detections = [detections[i] for i in u_detection]
         dists = matching.iou_distance(unconfirmed, detections)
-        matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)
+        matches, u_unconfirmed, u_detection = matching.linear_assignment(
+            dists, thresh=0.7
+        )
         for itracked, idet in matches:
             unconfirmed[itracked].update(detections[idet], self.frame_id)
             activated_starcks.append(unconfirmed[itracked])
@@ -376,22 +402,30 @@ class JDETracker(object):
 
         # print('Ramained match {} s'.format(t4-t3))
 
-        self.tracked_stracks = [t for t in self.tracked_stracks if t.state == TrackState.Tracked]
+        self.tracked_stracks = [
+            t for t in self.tracked_stracks if t.state == TrackState.Tracked
+        ]
         self.tracked_stracks = joint_stracks(self.tracked_stracks, activated_starcks)
         self.tracked_stracks = joint_stracks(self.tracked_stracks, refind_stracks)
         self.lost_stracks = sub_stracks(self.lost_stracks, self.tracked_stracks)
         self.lost_stracks.extend(lost_stracks)
         self.lost_stracks = sub_stracks(self.lost_stracks, self.removed_stracks)
         self.removed_stracks.extend(removed_stracks)
-        self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(self.tracked_stracks, self.lost_stracks)
+        self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(
+            self.tracked_stracks, self.lost_stracks
+        )
         # get scores of lost tracks
         output_stracks = [track for track in self.tracked_stracks if track.is_activated]
 
-        logger.debug('===========Frame {}=========='.format(self.frame_id))
-        logger.debug('Activated: {}'.format([track.track_id for track in activated_starcks]))
-        logger.debug('Refind: {}'.format([track.track_id for track in refind_stracks]))
-        logger.debug('Lost: {}'.format([track.track_id for track in lost_stracks]))
-        logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
+        logger.debug("===========Frame {}==========".format(self.frame_id))
+        logger.debug(
+            "Activated: {}".format([track.track_id for track in activated_starcks])
+        )
+        logger.debug("Refind: {}".format([track.track_id for track in refind_stracks]))
+        logger.debug("Lost: {}".format([track.track_id for track in lost_stracks]))
+        logger.debug(
+            "Removed: {}".format([track.track_id for track in removed_stracks])
+        )
 
         return output_stracks
 

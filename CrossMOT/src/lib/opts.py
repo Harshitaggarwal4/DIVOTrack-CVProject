@@ -16,7 +16,7 @@ class opts(object):
         self.parser.add_argument("--test", action="store_true")
         self.parser.add_argument(
             "--load_model",
-            default="../models/fairmot_dla34.pth",
+            default="",
             help="path to pretrained model",
         )
         self.parser.add_argument(
@@ -248,7 +248,7 @@ class opts(object):
             help="load data from cfg",
         )
         self.parser.add_argument(
-            "--data_dir", type=str, default="/mnt/sdb/dataset/MOT_datasets/"
+            "--data_dir", type=str, default="/scratch/harshit/DivoTrack_Dataset/datasets"
         )
 
         # loss
