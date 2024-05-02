@@ -141,12 +141,91 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         ch.append(c2)
     return nn.Sequential(*layers), sorted(save)
 
+class SelfAttention(nn.Module):
+    def __init__(self, embed_dim, num_heads):
+        super(SelfAttention, self).__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+
+        self.query_proj = nn.Linear(embed_dim, embed_dim)
+        self.key_proj = nn.Linear(embed_dim, embed_dim)
+        self.value_proj = nn.Linear(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
+
+    def forward(self, x):
+        # x: (batch_size, sequence_length, embed_dim)
+        batch_size, sequence_length, _ = x.size()
+
+        # Project input to query, key, and value
+        query = self.query_proj(x).view(batch_size, sequence_length, self.num_heads, self.head_dim)
+        key = self.key_proj(x).view(batch_size, sequence_length, self.num_heads, self.head_dim)
+        value = self.value_proj(x).view(batch_size, sequence_length, self.num_heads, self.head_dim)
+
+        # Compute scaled dot-product attention
+        query = query.transpose(1, 2)  # (batch_size, num_heads, sequence_length, head_dim)
+        key = key.transpose(1, 2)  # (batch_size, num_heads, sequence_length, head_dim)
+        value = value.transpose(1, 2)  # (batch_size, num_heads, sequence_length, head_dim)
+
+        key = key.transpose(-2, -1)  # Transpose key matrix for matrix multiplication
+
+        attention_scores = torch.matmul(query, key) / (self.head_dim ** 0.5)
+        attention_scores = attention_scores.softmax(dim=-1)
+
+        weighted_values = torch.matmul(attention_scores, value)
+        weighted_values = weighted_values.transpose(1, 2).contiguous().view(batch_size, sequence_length, -1)
+
+        # Apply output projection
+        output = self.out_proj(weighted_values)
+
+        return output
+    
+class SelfAttention1(nn.Module):
+    """ Self attention Layer"""
+    def __init__(self,in_dim,activation="relu"):
+        super(SelfAttention1,self).__init__()
+        self.chanel_in = in_dim
+        self.activation = activation
+        
+        self.query_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
+        self.key_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim//8 , kernel_size= 1)
+        self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.softmax  = nn.Softmax(dim=-1) #
+    def forward(self,x):
+        """
+            inputs :
+                x : input feature maps( B X C X W X H)
+            returns :
+                out : self attention value + input feature 
+                attention: B X N X N (N is Width*Height)
+        """
+        m_batchsize,C,width ,height = x.size()
+        proj_query  = self.query_conv(x).view(m_batchsize,-1,width*height).permute(0,2,1) # B X CX(N)
+        proj_key =  self.key_conv(x).view(m_batchsize,-1,width*height) # B X C x (*W*H)
+        with torch.no_grad():
+            energy =  torch.bmm(proj_query,proj_key) # transpose check
+            attention = self.softmax(energy) # BX (N) X (N) 
+            proj_value = self.value_conv(x).view(m_batchsize,-1,width*height) # B X C X N
+
+        out = torch.bmm(proj_value,attention.permute(0,2,1) )
+        out = out.view(m_batchsize,C,width,height)
+        
+        out = self.gamma*out + x
+        return out,attention
 
 class PoseYOLOv5s(nn.Module):
-    def __init__(self, heads, config_file):
+    def __init__(self, heads, config_file, attention=True):
         self.heads = heads
         super(PoseYOLOv5s, self).__init__()
         self.backbone = Model(config_file)
+        if attention:
+            # self.attention = SelfAttention(embed_dim=64, num_heads=8)
+            # self.attention = SelfAttention1(in_dim=64)
+            self.attention = torch.nn.MultiheadAttention(embed_dim=64, num_heads=2)
+        else:
+            self.attention = nn.Identity()
         for head in sorted(self.heads):
             num_output = self.heads[head]
             fc = nn.Sequential(
@@ -160,10 +239,22 @@ class PoseYOLOv5s(nn.Module):
                 fill_fc_weights(fc)
 
     def forward(self, x):
-        x = self.backbone(x)
+        x = self.backbone(x) # torch.Size([2, 64, 152, 272])
+        batch_size, channels, height, width = x.shape
+
+        x = x.view(batch_size, channels, height * width).transpose(1, 2)
+        # print("New x.shape: ", x.shape)
+
+        # attended_x, _ = self.attention(x)
+        attended_x, _ = self.attention(x, x, x)
+        # print("After attention: ", attended_x.shape)
+
+        attended_x = attended_x.transpose(1, 2).view(batch_size, channels, height, width)
+        # print("2 attended x.shape: ", attended_x.shape)
+
         ret = {}
         for head in self.heads:
-            ret[head] = self.__getattr__(head)(x)
+            ret[head] = self.__getattr__(head)(attended_x)
         return [ret]
 
 
