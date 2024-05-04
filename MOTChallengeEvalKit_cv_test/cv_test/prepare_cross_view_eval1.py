@@ -5,7 +5,7 @@ import numpy as np
 gt_dir = "data/eval/divo/gt"
 # track_dir = "data/eval/divo/mvmhat_result"
 # save_dir = "data/eval/divo/mvmhat_result_cvma"
-track_dir = "/media/bhavb/E Volume/Dev_Linux/CV/CV Project/Temperature/tracking_delta05_epsilon05" #track_with_conflict_free"
+track_dir = "/media/bhavb/E Volume/Dev_Linux/CV/CV Project/Others/track_yolov8"
 save_dir = "data/eval/divo/bhav"
 
 gt_folder = "gt"

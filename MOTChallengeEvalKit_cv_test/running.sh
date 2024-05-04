@@ -1,6 +1,6 @@
 #!/bin/bash
 
-folder="/media/bhavb/E Volume/Dev_Linux/CV/CV Project/Delta_Ablation"
+folder="/media/bhavb/E Volume/Dev_Linux/CV/CV Project/Others"
 
 for entry in "$folder"/*/; do
     # Check if the entry is a directory
@@ -15,8 +15,8 @@ for entry in "$folder"/*/; do
 
         python cv_test/prepare_cross_view_eval1.py
         echo "Running for F1"
-        python MOT/evalMOT.py --name bhav > "./results/$name.txt"
+        python MOT/evalMOT.py --name bhav > "./results_f/$name.txt"
         echo "Running for CVMA"
-        python MOT/evalMOT.py --name bhav --type Acc > "./results/${name}_cvma.txt"
+        python MOT/evalMOT.py --name bhav --type Acc > "./results_f/${name}_cvma.txt"
     fi
 done
