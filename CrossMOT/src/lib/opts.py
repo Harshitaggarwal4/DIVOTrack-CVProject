@@ -182,6 +182,9 @@ class opts(object):
         )
         # tracking
         self.parser.add_argument(
+            "--test_bbc", action="store_true", help="Track BBC dataset"
+        )
+        self.parser.add_argument(
             "--test_divo", action="store_true", help="Track DIVOTrack dataset"
         )
         self.parser.add_argument(

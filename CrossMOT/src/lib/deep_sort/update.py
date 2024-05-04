@@ -7,7 +7,7 @@ from application_util import visualization
 from scipy.optimize import linear_sum_assignment as sklearn_linear_assignment
 import cv2
 import numpy as np
-from opts import opts
+# from opts import opts
 
 RENEW_TIME = 1
 

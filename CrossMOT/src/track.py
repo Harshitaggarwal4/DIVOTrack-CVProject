@@ -75,7 +75,7 @@ def gather_seq_info_multi_view(opt, dataloader, seq, seq_length, use_cuda=True):
     seq_dict = {}
     # print('loading dataset...')
 
-    image_filenames = defaultdict(list)
+    # image_filenames = defaultdict(list)
     detections = defaultdict(list)
     view_detections = defaultdict(list)
     # model
@@ -90,9 +90,13 @@ def gather_seq_info_multi_view(opt, dataloader, seq, seq_length, use_cuda=True):
     model.eval()
 
     view_ls = dataloader.view_list
-    for data_i, (path, img, img0) in tqdm(enumerate(dataloader), total=len(dataloader)):
+    for data_i, data_i in tqdm(enumerate(dataloader), total=len(dataloader)):
         # blob
-        view = path.split("/")[-1].split("_")[1]
+        if opt.test_bbc:
+            path, img, img0, view = data_i
+        else:
+            path, img, img0 = data_i
+            view = path.split("/")[-1].split("_")[1]
 
         frame_index = int(path.split("/")[-1].split(".jpg")[0].split("_")[-1])
         # int(scn[0].split('_')[-1].split('.jpg')[0])
@@ -222,7 +226,7 @@ def gather_seq_info_multi_view(opt, dataloader, seq, seq_length, use_cuda=True):
             "min_frame_idx": 1,
             "max_frame_idx": seq_length,
         }
-        if opt.test_divo:
+        if opt.test_divo or opt.test_bbc:
             seq_dict = view_dict
         if opt.test_mvmhat or opt.test_mvmhat_campus or opt.test_wildtrack:
             view_dict["min_frame_idx"] = int(seq_length * 2 / 3) + 1
@@ -238,16 +242,27 @@ def main(
     data_root="/data/MOT16/train",
     seqs=("MOT16-05",),
     exp_name="demo",
+    view_ls=["View1", "View2", "View3"],
 ):
     logger.setLevel(logging.INFO)
     result_root = os.path.join(data_root, "..", "results", exp_name)
+    if opt.test_bbc:
+        result_root = os.path.join(data_root, "results", exp_name)
     mkdir_if_missing(result_root)
-    view_ls = ["View1", "View2", "View3"]
 
     # run tracking
     for seq in seqs:
         logger.info("start seq: {}".format(seq))
-        if opt.test_divo:
+        if opt.test_bbc:
+            seq_mv = {}
+            for view in view_ls:
+                dataloader = datasets.LoadImages_BBC(
+                    opt, osp.join(data_root, view, seq, "video_frames"), opt.img_size
+                )
+                seq_mv[view] = gather_seq_info_multi_view(
+                    opt, dataloader, seq, dataloader.seq_length
+                )
+        elif opt.test_divo:
             seq_mv = {}
             for view in view_ls:
                 dataloader = datasets.LoadImages_DIVO(
@@ -295,7 +310,17 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     opt = opts().init()
 
-    if opt.test_divo:
+    view_ls=["View1", "View2", "View3"]
+
+    if opt.test_bbc:
+        seqs_str = """take02_02
+        take012_22
+        take019_30
+        take019_31"""
+        data_root = opt.data_dir # /scratch/harshit/BBC
+        view_ls = ["cam1", "cam2", "cam3"]
+
+    elif opt.test_divo:
         seqs_str = """Circle
                       Shop
                       Moving
@@ -308,7 +333,7 @@ if __name__ == "__main__":
                       Gate2"""
         data_root = os.path.join(opt.data_dir, "images/test")
 
-    if opt.test_mvmhat:
+    elif opt.test_mvmhat:
         seqs_str = """scene1
                       scene2
                       scene3
@@ -317,17 +342,17 @@ if __name__ == "__main__":
                       scene6"""
         data_root = os.path.join(opt.data_dir, "FairMOT_MVMHAT/images/train")
 
-    if opt.test_mvmhat_campus:
+    elif opt.test_mvmhat_campus:
         seqs_str = """scene1
                       scene2
                       scene3"""
         data_root = os.path.join(opt.data_dir, "FairMOT_MVMHAT_campus/images/train")
 
-    if opt.test_wildtrack:
+    elif opt.test_wildtrack:
         seqs_str = """wildtrack"""
         data_root = os.path.join(opt.data_dir, "wildtrack/images/train")
 
-    if opt.test_epfl:
+    elif opt.test_epfl:
         seqs_str = """basketball
                       laboratary
                       passageway
@@ -335,4 +360,4 @@ if __name__ == "__main__":
         data_root = os.path.join(opt.data_dir, "CrossMOT_dataset/EPFL/images/train")
     seqs = [seq.strip() for seq in seqs_str.split()]
 
-    main(opt, data_root=data_root, seqs=seqs, exp_name=opt.exp_name)
+    main(opt, data_root=data_root, seqs=seqs, exp_name=opt.exp_name, view_ls=view_ls)
