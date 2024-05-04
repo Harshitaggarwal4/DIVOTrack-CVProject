@@ -30,7 +30,7 @@ class Update:
     def create_detections(self, detection_mat, frame_idx, min_height=0):
         if len(detection_mat) == 0:
             return []
-        frame_indices = detection_mat[:, 0].astype(np.int)
+        frame_indices = detection_mat[:, 0].astype(np.int64)
         mask = frame_indices == frame_idx
 
         detection_list = []
