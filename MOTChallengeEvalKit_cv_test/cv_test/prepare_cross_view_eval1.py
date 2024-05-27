@@ -2,22 +2,25 @@ import os
 import numpy as np
 
 
-gt_dir = "data/eval/divo/gt"
+# gt_dir = "data/eval/divo/gt"
 # track_dir = "data/eval/divo/mvmhat_result"
 # save_dir = "data/eval/divo/mvmhat_result_cvma"
-track_dir = "/media/bhavb/E Volume/Dev_Linux/CV/CV Project/Others/track_yolov8"
+
+# track_dir = "/media/bhavb/E Volume/Dev_Linux/CV/CV Project/Others/track_yolov8"
+gt_dir = "/home/bhavb/Dev/CV/DIVOTrack/Videos/gt"
+track_dir = "/home/bhavb/Dev/CV/DIVOTrack/BBC results/track_bbc"
 save_dir = "data/eval/divo/bhav"
 
 gt_folder = "gt"
 
-gt_box_type = 'xyxy'
-delimiter = ' '
+# gt_box_type = 'xyxy'
+# delimiter = ' '
 
-# gt_box_type = 'xywh'
-# delimiter = ','
+gt_box_type = 'xywh'
+delimiter = ','
 
-# track_box_type = 'xyxy'
-track_box_type = 'fucked'
+track_box_type = 'xyxy'
+# track_box_type = 'fucked'
 # track_box_type = 'xywh'
 track_delimiter = ','
 
@@ -109,25 +112,27 @@ for n in range(len(scene_list)):
 		# 	"View2": "View2",
 		# 	"View3": "View3",
 		# }
-		new_names = {
-			"Drone": "View1",
-			"View1": "View2",
-			"View2": "View3",
-		}
+		# new_names = {
+		# 	"Drone": "View1",
+		# 	"View1": "View2",
+		# 	"View2": "View3",
+		# }
 		# new_names = {
 		# 	"Drone": "Drone",
 		# 	"View1": "View1",
 		# 	"View2": "View2",
 		# 	"View3": "View3",
 		# }
-		track_path = track_vid_dir+"/"+new_names[vid_name.split(".")[0]]+".txt"
+		track_path = track_vid_dir+"/"+vid_name
 
-		if "View2" in track_path:
-			scale1=3640/1920
-			scale2=2048/1080
-		else:
-			scale1=1
-			scale2=1
+		# if "View2" in track_path:
+		# 	scale1=3640/1920
+		# 	scale2=2048/1080
+		# else:
+		# 	scale1=1
+		# 	scale2=1
+		scale1 = 3840/1920
+		scale2 = 2160/1080
 
 		# convert format
 		gt_data = np.loadtxt(gt_path, delimiter=delimiter, dtype=str)
